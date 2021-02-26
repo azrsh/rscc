@@ -1,5 +1,7 @@
 mod tokenizer;
+mod parser;
 use crate::tokenizer::tokenize;
+use crate::parser::parse;
 
 fn main() {
     compile("int main() { return 0; }");
@@ -14,7 +16,13 @@ fn compile(source: &str) {
         }
     };
 
-    for token in tokens {
-        println!("{}", token);
-    }
+    let ast = match parse(tokens) {
+        Ok(result) => result,
+        Err(message) => {
+            println!("Parse Error: {}", message);
+            return;
+        },
+    };
+
+    println!("{}", ast)
 }

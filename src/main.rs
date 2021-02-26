@@ -1,7 +1,7 @@
-mod tokenizer;
 mod parser;
-use crate::tokenizer::tokenize;
+mod tokenizer;
 use crate::parser::parse;
+use crate::tokenizer::tokenize;
 
 fn main() {
     compile("int main() { return 0; }");
@@ -21,8 +21,8 @@ fn compile(source: &str) {
         Err(message) => {
             println!("Parse Error: {}", message);
             return;
-        },
+        }
     };
 
-    println!("{}", ast)
+    println!("{:?}", ast)
 }

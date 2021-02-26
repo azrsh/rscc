@@ -112,7 +112,7 @@ pub enum Literal<'a> {
     Number(i32),
 }
 
-impl fmt::Display for  Literal<'_> {
+impl fmt::Debug for Literal<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Literal::String(s) => write!(f, "String:{}", s),
@@ -130,13 +130,13 @@ pub enum Token<'a> {
     End,
 }
 
-impl fmt::Display for  Token<'_> {
+impl fmt::Debug for Token<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Token::Punctuator(kind) => write!(f, "Punctuator:{:?}", kind),
             Token::Keyword(kind) => write!(f, "Keyword:{:?}", kind),
             Token::Identifier(s) => write!(f, "Identifier:{}", s),
-            Token::Literal(s) => write!(f, "Literal:{}", s),
+            Token::Literal(s) => write!(f, "Literal:{:?}", s),
             Token::End => write!(f, "End"),
         }
     }
@@ -159,7 +159,7 @@ fn skip_whitespace(context: &mut TokenizationContext) -> () {
             break;
         }
         count += 1;
-    }   
+    }
     consume_str(context, count);
 }
 
@@ -183,16 +183,18 @@ fn is_identifier_body(p: char) -> bool {
 fn count_identifier_length(head: &str) -> usize {
     let mut chars = head.chars();
     match chars.nth(0) {
-        Some(c) if is_identifier_head(c) => {},
-        _ => { return 0; },
+        Some(c) if is_identifier_head(c) => {}
+        _ => {
+            return 0;
+        }
     }
-    
+
     let mut count = 1;
     for c in chars {
         if !is_identifier_body(c) {
             break;
         }
-        count+= 1;
+        count += 1;
     }
     count
 }
@@ -203,7 +205,7 @@ fn consume_identifier<'a, 'b>(context: &'a mut TokenizationContext<'b>) -> Optio
             let result = &context.head[..n];
             consume_str(context, n);
             Some(result)
-        },
+        }
         _ => None,
     }
 }
@@ -215,20 +217,22 @@ fn consume_literal<'a, 'b>(context: &'a mut TokenizationContext<'b>) -> Option<L
             let mut count = 0;
             for c in chars {
                 match c {
-                    c if c == '\"' => { break; },
-                    _ => {}, 
+                    c if c == '\"' => {
+                        break;
+                    }
+                    _ => {}
                 }
                 count += 1;
             }
             let result = &context.head[1..count - 1];
             consume_str(context, count);
             Some(Literal::String(result))
-        },
+        }
         Some(c) if c == '\'' => {
             let result = chars.nth(0).unwrap();
             consume_str(context, 3);
             Some(Literal::Char(result))
-        },
+        }
         Some(c) if c.is_digit(10) => {
             let mut count = 1;
             for c in chars {
@@ -244,13 +248,13 @@ fn consume_literal<'a, 'b>(context: &'a mut TokenizationContext<'b>) -> Option<L
                 Ok(n) => Some(Literal::Number(n)),
                 Err(_) => None,
             }
-        },
+        }
         _ => None,
     }
 }
 
 pub fn tokenize(source: &str) -> Result<Vec<Token>, &str> {
-    let mut result =  Vec::<Token>::new();
+    let mut result = Vec::<Token>::new();
     let context = &mut TokenizationContext { head: source };
     loop {
         if context.head.len() == 0 {

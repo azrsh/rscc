@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PunctuatorKind {
     LeftSquareBracket,
     RightSquareBracket,
@@ -58,7 +58,7 @@ pub enum PunctuatorKind {
     DoublePercentColons,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum KeywordKind {
     Auto,
     Break,
@@ -109,7 +109,7 @@ pub enum KeywordKind {
 pub enum Literal<'a> {
     String(&'a str),
     Char(char),
-    Number(i32),
+    Number(u32),
 }
 
 impl fmt::Debug for Literal<'_> {
@@ -147,12 +147,12 @@ struct TokenizationContext<'a> {
 }
 
 //context.head must be greater than or equal count
-fn consume_str(context: &mut TokenizationContext, count: usize) -> () {
+fn consume_str(context: &mut TokenizationContext, count: usize) {
     assert!(context.head.len() >= count);
     context.head = &context.head[count..];
 }
 
-fn skip_whitespace(context: &mut TokenizationContext) -> () {
+fn skip_whitespace(context: &mut TokenizationContext) {
     let mut count = 0;
     for c in context.head.chars() {
         if !c.is_whitespace() {
@@ -242,7 +242,7 @@ fn consume_literal<'a, 'b>(context: &'a mut TokenizationContext<'b>) -> Option<L
                 count += 1;
             }
             let result = &context.head[..count];
-            let result = result.parse::<i32>();
+            let result = result.parse::<u32>();
             consume_str(context, count);
             match result {
                 Ok(n) => Some(Literal::Number(n)),

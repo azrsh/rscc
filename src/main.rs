@@ -4,7 +4,7 @@ use crate::parser::parse;
 use crate::tokenizer::tokenize;
 
 fn main() {
-    compile("int main() { return 0; }");
+    compile("0");
 }
 
 fn compile(source: &str) {
@@ -16,7 +16,7 @@ fn compile(source: &str) {
         }
     };
 
-    let ast = match parse(tokens) {
+    let ast = match parse(&tokens) {
         Ok(result) => result,
         Err(message) => {
             println!("Parse Error: {}", message);

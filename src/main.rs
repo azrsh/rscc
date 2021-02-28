@@ -4,7 +4,7 @@ use crate::parser::parse;
 use crate::tokenizer::tokenize;
 
 fn main() {
-    compile("0");
+    compile("(1 + 2 + 3 - 1) * 2");
 }
 
 fn compile(source: &str) {
@@ -15,6 +15,10 @@ fn compile(source: &str) {
             return;
         }
     };
+
+    for token in &tokens {
+        println!("{:?}", token);
+    }
 
     let ast = match parse(&tokens) {
         Ok(result) => result,

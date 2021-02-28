@@ -182,7 +182,7 @@ fn is_identifier_body(p: char) -> bool {
 
 fn count_identifier_length(head: &str) -> usize {
     let mut chars = head.chars();
-    match chars.nth(0) {
+    match chars.next() {
         Some(c) if is_identifier_head(c) => {}
         _ => {
             return 0;
@@ -212,7 +212,7 @@ fn consume_identifier<'a, 'b>(context: &'a mut TokenizationContext<'b>) -> Optio
 
 fn consume_literal<'a, 'b>(context: &'a mut TokenizationContext<'b>) -> Option<Literal<'b>> {
     let mut chars = context.head.chars();
-    match chars.nth(0) {
+    match chars.next() {
         Some(c) if c == '\"' => {
             let mut count = 0;
             for c in chars {
@@ -229,7 +229,7 @@ fn consume_literal<'a, 'b>(context: &'a mut TokenizationContext<'b>) -> Option<L
             Some(Literal::String(result))
         }
         Some(c) if c == '\'' => {
-            let result = chars.nth(0).unwrap();
+            let result = chars.next().unwrap();
             consume_str(context, 3);
             Some(Literal::Char(result))
         }
@@ -257,7 +257,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, &str> {
     let mut result = Vec::<Token>::new();
     let context = &mut TokenizationContext { head: source };
     loop {
-        if context.head.len() == 0 {
+        if context.head.is_empty() {
             break;
         }
 
@@ -319,8 +319,6 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, &str> {
             Token::Punctuator(PunctuatorKind::LessThanPercent)
         } else if consume_reserved(context, "%>") {
             Token::Punctuator(PunctuatorKind::PercentGreaterThan)
-        } else if consume_reserved(context, "%:") {
-            Token::Punctuator(PunctuatorKind::PercentColon)
         } else if consume_reserved(context, "%:") {
             Token::Punctuator(PunctuatorKind::PercentColon)
         } else if consume_reserved(context, "[") {

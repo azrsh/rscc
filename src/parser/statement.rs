@@ -4,36 +4,36 @@ use crate::tokenizer::*;
 
 #[derive(Debug)]
 pub enum StatementNode<'a> {
-    NullStatement,
-    ExpressionStatement(ExpressionNode<'a>),
-    IfStatement {
+    Null,
+    Expression(ExpressionNode<'a>),
+    If {
         condition: Box<ExpressionNode<'a>>,
         statement: Box<StatementNode<'a>>,
     },
-    SwitchStatement {
+    Switch {
         condition: Box<ExpressionNode<'a>>,
         statement: Box<StatementNode<'a>>,
     },
-    LabeledStatement(&'a str),
-    WhileStatement {
+    Labeled(&'a str),
+    While {
         condition: Box<ExpressionNode<'a>>,
         statement: Box<StatementNode<'a>>,
     },
-    DoWhileStatement {
+    DoWhile {
         condition: Box<ExpressionNode<'a>>,
         statement: Box<StatementNode<'a>>,
     },
-    ForStatement {
+    For {
         initialization: Box<ExpressionNode<'a>>,
         condition: Box<ExpressionNode<'a>>,
         afterthought: Box<ExpressionNode<'a>>,
         statement: Box<StatementNode<'a>>,
     },
-    CompoundStatement(Vec<StatementNode<'a>>),
-    ReturnStatement(Box<ExpressionNode<'a>>),
-    BreakStatement,
-    ContinueStatement,
-    GotoStatement(&'a str),
+    Compound(Vec<StatementNode<'a>>),
+    Return(Box<ExpressionNode<'a>>),
+    Break,
+    Continue,
+    Goto(&'a str),
 }
 
 //parser body
@@ -69,11 +69,12 @@ pub fn statement<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<StatementN
     }
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn null_statement<'a, 'b>(
     context: &'a mut ParseContext<'b>,
 ) -> Result<Option<StatementNode<'b>>, String> {
     let result = if consume_punctuator(context, PunctuatorKind::Semicolon).is_some() {
-        Some(StatementNode::NullStatement)
+        Some(StatementNode::Null)
     } else {
         None
     };
@@ -86,7 +87,7 @@ fn expression_statement<'a, 'b>(
 ) -> Result<Option<StatementNode<'b>>, String> {
     let result = expression(context)?;
     expect_punctuator(context, PunctuatorKind::Semicolon)?;
-    let result = StatementNode::ExpressionStatement(result);
+    let result = StatementNode::Expression(result);
     Ok(Some(result))
 }
 
@@ -103,7 +104,7 @@ fn if_statement<'a, 'b>(
 
     let body = statement(context)?;
 
-    Ok(Some(StatementNode::IfStatement {
+    Ok(Some(StatementNode::If {
         condition: Box::new(cond),
         statement: Box::new(body),
     }))
@@ -122,7 +123,7 @@ fn switch_statement<'a, 'b>(
 
     let body = statement(context)?;
 
-    Ok(Some(StatementNode::SwitchStatement {
+    Ok(Some(StatementNode::Switch {
         condition: Box::new(cond),
         statement: Box::new(body),
     }))
@@ -134,7 +135,7 @@ fn labeled_statement<'a, 'b>(
     let label = match consume_identifier(context) {
         Some(result) => {
             expect_punctuator(context, PunctuatorKind::Colon)?;
-            StatementNode::LabeledStatement(result)
+            StatementNode::Labeled(result)
         }
         None => return Ok(None),
     };
@@ -154,7 +155,7 @@ fn while_statement<'a, 'b>(
 
     let body = statement(context)?;
 
-    Ok(Some(StatementNode::WhileStatement {
+    Ok(Some(StatementNode::While {
         condition: Box::new(cond),
         statement: Box::new(body),
     }))
@@ -174,7 +175,7 @@ fn do_while_statement<'a, 'b>(
 
     expect_keyword(context, KeywordKind::While)?;
 
-    Ok(Some(StatementNode::DoWhileStatement {
+    Ok(Some(StatementNode::DoWhile {
         condition: Box::new(cond),
         statement: Box::new(body),
     }))
@@ -197,7 +198,7 @@ fn for_statement<'a, 'b>(
 
     let body = statement(context)?;
 
-    Ok(Some(StatementNode::ForStatement {
+    Ok(Some(StatementNode::For {
         initialization: Box::new(init),
         condition: Box::new(cond),
         afterthought: Box::new(after),
@@ -217,7 +218,7 @@ fn compound_statement<'a, 'b>(
         result.push(statement(context)?);
     }
 
-    Ok(Some(StatementNode::CompoundStatement(result)))
+    Ok(Some(StatementNode::Compound(result)))
 }
 
 fn return_statement<'a, 'b>(
@@ -229,7 +230,7 @@ fn return_statement<'a, 'b>(
 
     let content = expression(context)?;
 
-    Ok(Some(StatementNode::ReturnStatement(Box::new(content))))
+    Ok(Some(StatementNode::Return(Box::new(content))))
 }
 
 fn break_statement<'a, 'b>(
@@ -238,7 +239,7 @@ fn break_statement<'a, 'b>(
     let result = match consume_keyword(context, KeywordKind::Break) {
         Some(_) => {
             expect_punctuator(context, PunctuatorKind::Semicolon)?;
-            Some(StatementNode::BreakStatement)
+            Some(StatementNode::Break)
         }
         None => None,
     };
@@ -251,7 +252,7 @@ fn continue_statement<'a, 'b>(
     let result = match consume_keyword(context, KeywordKind::Continue) {
         Some(_) => {
             expect_punctuator(context, PunctuatorKind::Semicolon)?;
-            Some(StatementNode::ContinueStatement)
+            Some(StatementNode::Continue)
         }
         None => None,
     };
@@ -267,5 +268,5 @@ fn goto_statement<'a, 'b>(
 
     let label = expect_identifier(context)?;
 
-    Ok(Some(StatementNode::GotoStatement(label)))
+    Ok(Some(StatementNode::Goto(label)))
 }

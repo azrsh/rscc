@@ -4,7 +4,7 @@ use crate::parser::parse;
 use crate::tokenizer::tokenize;
 
 fn main() {
-    compile("(1 + 2 + 3 - 1) * 2");
+    compile("if (1 > 0) { (1 + 2 + 3 - 1) * 2; }");
 }
 
 fn compile(source: &str) {

@@ -5,32 +5,32 @@ use crate::tokenizer::*;
 #[derive(Debug)]
 pub enum StatementNode<'a> {
     Null,
-    Expression(ExpressionNode<'a>),
+    Expression(Expression<'a>),
     If {
-        condition: Box<ExpressionNode<'a>>,
+        condition: Box<Expression<'a>>,
         statement: Box<StatementNode<'a>>,
     },
     Switch {
-        condition: Box<ExpressionNode<'a>>,
+        condition: Box<Expression<'a>>,
         statement: Box<StatementNode<'a>>,
     },
     Labeled(&'a str),
     While {
-        condition: Box<ExpressionNode<'a>>,
+        condition: Box<Expression<'a>>,
         statement: Box<StatementNode<'a>>,
     },
     DoWhile {
-        condition: Box<ExpressionNode<'a>>,
+        condition: Box<Expression<'a>>,
         statement: Box<StatementNode<'a>>,
     },
     For {
-        initialization: Box<ExpressionNode<'a>>,
-        condition: Box<ExpressionNode<'a>>,
-        afterthought: Box<ExpressionNode<'a>>,
+        initialization: Box<Expression<'a>>,
+        condition: Box<Expression<'a>>,
+        afterthought: Box<Expression<'a>>,
         statement: Box<StatementNode<'a>>,
     },
     Compound(Vec<StatementNode<'a>>),
-    Return(Box<ExpressionNode<'a>>),
+    Return(Box<Expression<'a>>),
     Break,
     Continue,
     Goto(&'a str),

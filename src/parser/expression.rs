@@ -3,21 +3,21 @@ use crate::tokenizer::*;
 use std::sync::Arc;
 
 #[derive(Debug)]
-pub enum ExpressionNode<'a> {
+pub enum Expression<'a> {
     TernaryOperator {
         kind: TernaryOperatorKind,
-        first: Arc<ExpressionNode<'a>>,
-        second: Arc<ExpressionNode<'a>>,
-        third: Arc<ExpressionNode<'a>>,
+        first: Arc<Expression<'a>>,
+        second: Arc<Expression<'a>>,
+        third: Arc<Expression<'a>>,
     },
     BinaryOperator {
         kind: BinaryOperatorKind,
-        lhs: Arc<ExpressionNode<'a>>,
-        rhs: Arc<ExpressionNode<'a>>,
+        lhs: Arc<Expression<'a>>,
+        rhs: Arc<Expression<'a>>,
     },
     UnaryOperator {
         kind: UnaryOperatorKind<'a>,
-        operand: Arc<ExpressionNode<'a>>,
+        operand: Arc<Expression<'a>>,
     },
     Immediate(Immediate<'a>),
 }
@@ -52,12 +52,12 @@ pub enum BinaryOperatorKind {
 
 #[derive(Debug)]
 pub enum UnaryOperatorKind<'a> {
-    LogicalNot,                            // !operand
-    BitwiseNot,                            // ~operand
-    Reference,                             // &operand
-    Dereference,                           // *operand
-    Cast(Type),                            // (type-name)operand
-    FunctionCall(Vec<ExpressionNode<'a>>), // operand(parameter-lisr)
+    LogicalNot,                        // !operand
+    BitwiseNot,                        // ~operand
+    Reference,                         // &operand
+    Dereference,                       // *operand
+    Cast(Type),                        // (type-name)operand
+    FunctionCall(Vec<Expression<'a>>), // operand(parameter-lisr)
 }
 
 #[derive(Debug)]
@@ -71,11 +71,11 @@ pub enum Immediate<'a> {
 pub struct Type {}
 
 //parser body
-pub fn expression<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+pub fn expression<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut current = assign(context)?;
     loop {
         if consume_punctuator(context, PunctuatorKind::Commma).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Comma,
                 lhs: Arc::new(current),
                 rhs: Arc::new(assign(context)?),
@@ -88,11 +88,11 @@ pub fn expression<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expressio
     Ok(current)
 }
 
-fn assign<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn assign<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut current = conditional(context)?;
     loop {
         if consume_punctuator(context, PunctuatorKind::Equal).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Assign,
                 lhs: Arc::new(current),
                 rhs: Arc::new(conditional(context)?),
@@ -105,12 +105,12 @@ fn assign<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b
     Ok(current)
 }
 
-fn conditional<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn conditional<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let condition = logical_or(context)?;
     let result = if consume_punctuator(context, PunctuatorKind::Question).is_some() {
         let second = expression(context)?;
         expect_punctuator(context, PunctuatorKind::Colon)?;
-        ExpressionNode::TernaryOperator {
+        Expression::TernaryOperator {
             kind: TernaryOperatorKind::Conditional,
             first: Arc::new(condition),
             second: Arc::new(second),
@@ -123,11 +123,11 @@ fn conditional<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNo
     Ok(result)
 }
 
-fn logical_or<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn logical_or<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut current = logical_and(context)?;
     let result = loop {
         if consume_punctuator(context, PunctuatorKind::DoublePipelines).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::LogicalOr,
                 lhs: Arc::new(current),
                 rhs: Arc::new(logical_and(context)?),
@@ -140,11 +140,11 @@ fn logical_or<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNod
     Ok(result)
 }
 
-fn logical_and<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn logical_and<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut current = bitwise_inclusive_or(context)?;
     let result = loop {
         if consume_punctuator(context, PunctuatorKind::DoubleAmpersands).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::LogicalAnd,
                 lhs: Arc::new(current),
                 rhs: Arc::new(bitwise_inclusive_or(context)?),
@@ -159,11 +159,11 @@ fn logical_and<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNo
 
 fn bitwise_inclusive_or<'a, 'b>(
     context: &'a mut ParseContext<'b>,
-) -> Result<ExpressionNode<'b>, String> {
+) -> Result<Expression<'b>, String> {
     let mut current = bitwise_exclusive_or(context)?;
     let result = loop {
         if consume_punctuator(context, PunctuatorKind::Pipeline).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::BitwiseOr,
                 lhs: Arc::new(current),
                 rhs: Arc::new(bitwise_exclusive_or(context)?),
@@ -178,11 +178,11 @@ fn bitwise_inclusive_or<'a, 'b>(
 
 fn bitwise_exclusive_or<'a, 'b>(
     context: &'a mut ParseContext<'b>,
-) -> Result<ExpressionNode<'b>, String> {
+) -> Result<Expression<'b>, String> {
     let mut current = bitwise_and(context)?;
     let result = loop {
         if consume_punctuator(context, PunctuatorKind::Hat).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::BitwiseXor,
                 lhs: Arc::new(current),
                 rhs: Arc::new(bitwise_and(context)?),
@@ -195,11 +195,11 @@ fn bitwise_exclusive_or<'a, 'b>(
     Ok(result)
 }
 
-fn bitwise_and<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn bitwise_and<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut current = equality(context)?;
     let result = loop {
         if consume_punctuator(context, PunctuatorKind::Ampersand).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::BitwiseAnd,
                 lhs: Arc::new(current),
                 rhs: Arc::new(equality(context)?),
@@ -212,17 +212,17 @@ fn bitwise_and<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNo
     Ok(result)
 }
 
-fn equality<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn equality<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut current = relational(context)?;
     let result = loop {
         if consume_punctuator(context, PunctuatorKind::DoubleEquals).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Equal,
                 lhs: Arc::new(current),
                 rhs: Arc::new(relational(context)?),
             };
         } else if consume_punctuator(context, PunctuatorKind::ExclamationEqual).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::NotEqual,
                 lhs: Arc::new(current),
                 rhs: Arc::new(relational(context)?),
@@ -235,29 +235,29 @@ fn equality<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<
     Ok(result)
 }
 
-fn relational<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn relational<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut current = shift(context)?;
     let result = loop {
         if consume_punctuator(context, PunctuatorKind::LessThan).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::LessThan,
                 lhs: Arc::new(current),
                 rhs: Arc::new(shift(context)?),
             };
         } else if consume_punctuator(context, PunctuatorKind::GreaterThan).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::LessThan,
                 lhs: Arc::new(shift(context)?),
                 rhs: Arc::new(current),
             };
         } else if consume_punctuator(context, PunctuatorKind::LessThanEqual).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::LessThanEqual,
                 lhs: Arc::new(current),
                 rhs: Arc::new(shift(context)?),
             };
         } else if consume_punctuator(context, PunctuatorKind::GreaterThanEqual).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::LessThanEqual,
                 lhs: Arc::new(shift(context)?),
                 rhs: Arc::new(current),
@@ -270,17 +270,17 @@ fn relational<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNod
     Ok(result)
 }
 
-fn shift<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn shift<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut current = add(context)?;
     let result = loop {
         if consume_punctuator(context, PunctuatorKind::DoubleLessThans).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::LeftShift,
                 lhs: Arc::new(current),
                 rhs: Arc::new(add(context)?),
             };
         } else if consume_punctuator(context, PunctuatorKind::DoubleGreaterThans).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::RightShift,
                 lhs: Arc::new(current),
                 rhs: Arc::new(add(context)?),
@@ -293,17 +293,17 @@ fn shift<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>
     Ok(result)
 }
 
-fn add<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn add<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut current = multiply(context)?;
     let result = loop {
         if consume_punctuator(context, PunctuatorKind::Plus).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Add,
                 lhs: Arc::new(current),
                 rhs: Arc::new(multiply(context)?),
             };
         } else if consume_punctuator(context, PunctuatorKind::Minus).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Sub,
                 lhs: Arc::new(current),
                 rhs: Arc::new(multiply(context)?),
@@ -316,23 +316,23 @@ fn add<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, 
     Ok(result)
 }
 
-fn multiply<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn multiply<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut current = unary(context)?;
     let result = loop {
         if consume_punctuator(context, PunctuatorKind::Star).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Mul,
                 lhs: Arc::new(current),
                 rhs: Arc::new(unary(context)?),
             };
         } else if consume_punctuator(context, PunctuatorKind::Slash).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Div,
                 lhs: Arc::new(current),
                 rhs: Arc::new(unary(context)?),
             };
         } else if consume_punctuator(context, PunctuatorKind::Percent).is_some() {
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Mod,
                 lhs: Arc::new(current),
                 rhs: Arc::new(unary(context)?),
@@ -345,7 +345,7 @@ fn multiply<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<
     Ok(result)
 }
 
-fn unary<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn unary<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut stack = Vec::<UnaryOperatorKind>::new();
     loop {
         if consume_punctuator(context, PunctuatorKind::Exclamation).is_some() {
@@ -367,7 +367,7 @@ fn unary<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>
     let mut current = postfix(context)?;
     while !stack.is_empty() {
         let operator = stack.pop().unwrap();
-        current = ExpressionNode::UnaryOperator {
+        current = Expression::UnaryOperator {
             kind: operator,
             operand: Arc::new(current),
         };
@@ -376,7 +376,7 @@ fn unary<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>
     Ok(current)
 }
 
-fn postfix<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn postfix<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let mut current = primary(context)?;
 
     let result = loop {
@@ -390,38 +390,38 @@ fn postfix<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'
                     }
                 }
             }
-            current = ExpressionNode::UnaryOperator {
+            current = Expression::UnaryOperator {
                 kind: UnaryOperatorKind::FunctionCall(parameters),
                 operand: Arc::new(current),
             };
         } else if consume_punctuator(context, PunctuatorKind::LeftSquareBracket).is_some() {
             let index = expression(context)?;
             expect_punctuator(context, PunctuatorKind::RightSquareBracket)?;
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Add,
                 lhs: Arc::new(current),
                 rhs: Arc::new(index),
             };
         } else if consume_punctuator(context, PunctuatorKind::DoublePluses).is_some() {
             let current_arc = Arc::new(current);
-            let add = ExpressionNode::BinaryOperator {
+            let add = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Add,
                 lhs: Arc::clone(&current_arc),
-                rhs: Arc::new(ExpressionNode::Immediate(Immediate::Number(1))),
+                rhs: Arc::new(Expression::Immediate(Immediate::Number(1))),
             };
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Assign,
                 lhs: Arc::clone(&current_arc),
                 rhs: Arc::new(add),
             };
         } else if consume_punctuator(context, PunctuatorKind::DoubleMinuses).is_some() {
             let current_arc = Arc::new(current);
-            let sub = ExpressionNode::BinaryOperator {
+            let sub = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Sub,
                 lhs: Arc::clone(&current_arc),
-                rhs: Arc::new(ExpressionNode::Immediate(Immediate::Number(1))),
+                rhs: Arc::new(Expression::Immediate(Immediate::Number(1))),
             };
-            current = ExpressionNode::BinaryOperator {
+            current = Expression::BinaryOperator {
                 kind: BinaryOperatorKind::Assign,
                 lhs: Arc::clone(&current_arc),
                 rhs: Arc::new(sub),
@@ -434,7 +434,7 @@ fn postfix<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'
     Ok(result)
 }
 
-fn primary<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn primary<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     match consume_punctuator(context, PunctuatorKind::LeftRoundBracket) {
         Some(_) => {
             let result = expression(context);
@@ -445,7 +445,7 @@ fn primary<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'
     }
 }
 
-fn literal<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'b>, String> {
+fn literal<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<Expression<'b>, String> {
     let content = expect_literal(context)?;
 
     let result = match content {
@@ -454,5 +454,5 @@ fn literal<'a, 'b>(context: &'a mut ParseContext<'b>) -> Result<ExpressionNode<'
         Literal::Number(content) => Immediate::Number(*content),
     };
 
-    Ok(ExpressionNode::Immediate(result))
+    Ok(Expression::Immediate(result))
 }

@@ -1,5 +1,6 @@
 mod parser;
 mod tokenizer;
+mod util;
 use crate::parser::parse;
 use crate::tokenizer::tokenize;
 

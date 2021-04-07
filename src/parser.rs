@@ -1,6 +1,8 @@
+mod declaration;
 mod expression;
 mod statement;
 mod util;
+use crate::parser::declaration::*;
 use crate::parser::statement::*;
 use crate::parser::util::*;
 use crate::tokenizer::*;

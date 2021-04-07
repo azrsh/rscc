@@ -153,14 +153,7 @@ fn consume_str(context: &mut TokenizationContext, count: usize) {
 }
 
 fn skip_whitespace(context: &mut TokenizationContext) {
-    let mut count = 0;
-    for c in context.head.chars() {
-        if !c.is_whitespace() {
-            break;
-        }
-        count += 1;
-    }
-    consume_str(context, count);
+    context.head = context.head.trim_start();
 }
 
 fn consume_reserved(context: &mut TokenizationContext, q: &str) -> bool {

@@ -166,19 +166,24 @@ pub enum DirectAbstarctDeclarator<'a> {
 pub fn declaration<'a, 'b>(
     context: &'a mut ParseContext<'b>,
 ) -> Result<Option<Declaration<'b>>, String> {
-    let mut declaration_specifiers = Vec::new();
-    while let Some(specifier) = declaration_specifier(context)? {
-        declaration_specifiers.push(specifier);
-    }
-    if declaration_specifiers.is_empty() {
-        return Ok(None);
-    }
-    let declaration_specifiers = declaration_specifiers.into();
+    let declaration_specifiers = match declaration_specifier(context)? {
+        Some(specifier) => specifier,
+        None => return Ok(None),
+    };
 
     let mut init_declarators = Vec::new();
-    while let Some(declarator) = init_declarator(context)? {
+    loop {
+        let declarator = match init_declarator(context)? {
+            Some(d) => d,
+            None => return Err("Parse Error".to_string()),
+        };
         init_declarators.push(declarator);
+
+        if consume_punctuator(context, PunctuatorKind::Commma).is_none() {
+            break;
+        }
     }
+    expect_punctuator(context, PunctuatorKind::Semicolon)?;
 
     let result = Declaration {
         specifiers: declaration_specifiers,
@@ -193,9 +198,9 @@ fn declaration_specifier<'a, 'b>(
     let mut declaration_specifiers = Vec::new();
     loop {
         let specifier = if let Some(specifier) = storage_class_specifier(context)? {
-            specifier
+            DeclarationSpecifier::StorageSpecifier(specifier)
         } else if let Some(specifier) = type_specifier(context)? {
-            specifier
+            DeclarationSpecifier::TypeSpecifier(specifier)
         } else if let Some(specifier) = type_qualifier(context)? {
             specifier
         } else if let Some(specifier) = alignment_specifier(context)? {
@@ -214,14 +219,48 @@ fn declaration_specifier<'a, 'b>(
 
 fn storage_class_specifier<'a, 'b>(
     context: &'a mut ParseContext<'b>,
-) -> Result<Option<DeclarationSpecifier<'b>>, String> {
-    Err("".to_string())
+) -> Result<Option<StorageClassSpecifier>, String> {
+    let specifier = if consume_keyword(context, KeywordKind::Typedef).is_some() {
+        Some(StorageClassSpecifier::Typedef)
+    } else if consume_keyword(context, KeywordKind::Extern).is_some() {
+        Some(StorageClassSpecifier::Extern)
+    } else if consume_keyword(context, KeywordKind::Static).is_some() {
+        Some(StorageClassSpecifier::Static)
+    } else if consume_keyword(context, KeywordKind::ThreadLocal).is_some() {
+        Some(StorageClassSpecifier::ThreadLocal)
+    } else if consume_keyword(context, KeywordKind::Auto).is_some() {
+        Some(StorageClassSpecifier::Auto)
+    } else if consume_keyword(context, KeywordKind::Register).is_some() {
+        Some(StorageClassSpecifier::Register)
+    } else {
+        None
+    };
+
+    Ok(specifier)
 }
 
 fn type_specifier<'a, 'b>(
     context: &'a mut ParseContext<'b>,
-) -> Result<Option<DeclarationSpecifier<'b>>, String> {
-    Err("".to_string())
+) -> Result<Option<TypeSpecifier<'b>>, String> {
+    let specifier = if consume_keyword(context, KeywordKind::Bool).is_some() {
+        Some(TypeSpecifier::Bool)
+    } else if consume_keyword(context, KeywordKind::Char).is_some() {
+        Some(TypeSpecifier::Char)
+    } else if consume_keyword(context, KeywordKind::Short).is_some() {
+        Some(TypeSpecifier::Short)
+    } else if consume_keyword(context, KeywordKind::Int).is_some() {
+        Some(TypeSpecifier::Int)
+    } else if consume_keyword(context, KeywordKind::Long).is_some() {
+        Some(TypeSpecifier::Long)
+    } else if consume_keyword(context, KeywordKind::Float).is_some() {
+        Some(TypeSpecifier::Float)
+    } else if consume_keyword(context, KeywordKind::Double).is_some() {
+        Some(TypeSpecifier::Double)
+    } else {
+        None
+    };
+
+    Ok(specifier)
 }
 
 fn type_qualifier<'a, 'b>(

@@ -281,16 +281,24 @@ fn type_qualifier<'a, 'b>(
     Ok(qualifier)
 }
 
-fn function_specifier<'a, 'b>(
+fn alignment_specifier<'a, 'b>(
     context: &'a mut ParseContext<'b>,
 ) -> Result<Option<DeclarationSpecifier<'b>>, String> {
     Err("".to_string())
 }
 
-fn alignment_specifier<'a, 'b>(
+fn function_specifier<'a, 'b>(
     context: &'a mut ParseContext<'b>,
-) -> Result<Option<DeclarationSpecifier<'b>>, String> {
-    Err("".to_string())
+) -> Result<Option<FunctionSpecifier>, String> {
+    let specifier = if consume_keyword(context, KeywordKind::Inline).is_some() {
+        Some(FunctionSpecifier::Inline)
+    } else if consume_keyword(context, KeywordKind::Noreturn).is_some() {
+        Some(FunctionSpecifier::Noreturn)
+    } else {
+        None
+    };
+
+    Ok(specifier)
 }
 
 fn init_declarator<'a, 'b>(

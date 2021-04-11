@@ -201,8 +201,8 @@ fn declaration_specifier<'a, 'b>(
             DeclarationSpecifier::StorageSpecifier(specifier)
         } else if let Some(specifier) = type_specifier(context)? {
             DeclarationSpecifier::TypeSpecifier(specifier)
-        } else if let Some(specifier) = type_qualifier(context)? {
-            specifier
+        } else if let Some(qualifier) = type_qualifier(context)? {
+            DeclarationSpecifier::TypeQualifier(qualifier)
         } else if let Some(specifier) = alignment_specifier(context)? {
             specifier
         } else if let Some(specifier) = function_specifier(context)? {
@@ -265,8 +265,20 @@ fn type_specifier<'a, 'b>(
 
 fn type_qualifier<'a, 'b>(
     context: &'a mut ParseContext<'b>,
-) -> Result<Option<DeclarationSpecifier<'b>>, String> {
-    Err("".to_string())
+) -> Result<Option<TypeQualifier>, String> {
+    let qualifier = if consume_keyword(context, KeywordKind::Const).is_some() {
+        Some(TypeQualifier::Const)
+    } else if consume_keyword(context, KeywordKind::Restrict).is_some() {
+        Some(TypeQualifier::Restrict)
+    } else if consume_keyword(context, KeywordKind::Volatile).is_some() {
+        Some(TypeQualifier::Volatile)
+    } else if consume_keyword(context, KeywordKind::Atomic).is_some() {
+        Some(TypeQualifier::Atomic)
+    } else {
+        None
+    };
+
+    Ok(qualifier)
 }
 
 fn function_specifier<'a, 'b>(
